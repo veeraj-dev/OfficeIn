@@ -9,8 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.5.0",
     "axios": "^1.15.2",
     "react": "latest",
+    "react-redux": "^9.2.0",
     "react-dom": "latest",
     "react-router-dom": "latest"
   },

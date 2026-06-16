@@ -36,7 +36,7 @@ npm run dev:client
 ```
 
 ### URLs
-- **Client**: `http://localhost:5174/` (Vite may auto-pick another port)
+- **Client**: `http://localhost:5173/` (Vite may auto-pick another port)
 - **API**: `http://localhost:5000/api`
 
 # Office Management (MERN)
@@ -55,6 +55,8 @@ An **office management** starter app built with **MongoDB + Express + React (Vit
 
 - Install **Node.js (LTS)** from [nodejs.org](https://nodejs.org/)
 - Install and run **MongoDB** locally, or use MongoDB Atlas
+  - For local MongoDB: Download from [mongodb.com](https://www.mongodb.com/try/download/community), start `mongod` service
+  - For Atlas: Create cluster, get connection string, update `MONGO_URI` in `server/.env`
 
 ## Quick start
 
@@ -67,6 +69,8 @@ npm run install:all
 # start both backend and frontend (two terminals)
 npm run dev
 ```
+
+**Note**: The server requires MongoDB to be running. If you see "Failed to start server" with ECONNREFUSED, ensure MongoDB is started.
 
 Then open the app at `http://localhost:5173`.
 

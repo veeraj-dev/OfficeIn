@@ -1,14 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
-import api from "../lib/api.js";
 import { useAuth } from "../state/auth.jsx";
+import {
+  useCreateEmployeeWithUserMutation,
+  useDeleteEmployeeMutation,
+  useGetDepartmentsQuery,
+  useGetEmployeesQuery,
+} from "../store/officeApi.js";
 
 export default function EmployeesPage() {
   const { isManager, normalizeError } = useAuth();
-  const [employees, setEmployees] = useState([]);
-  const [depts, setDepts] = useState([]);
+  const { data: depts = [], error: deptErr, isError: deptFailed } = useGetDepartmentsQuery(undefined, {
+    skip: !isManager,
+  });
+  const { data: employees = [], error: empErr, isError: empFailed } = useGetEmployeesQuery(undefined, {
+    skip: !isManager,
+  });
+  const [createEmployeeWithUser, { isLoading: creating }] = useCreateEmployeeWithUserMutation();
+  const [deleteEmployee] = useDeleteEmployeeMutation();
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -24,45 +33,43 @@ export default function EmployeesPage() {
 
   const deptOptions = useMemo(() => depts.map((d) => ({ value: d._id, label: d.name })), [depts]);
 
-  async function load() {
-    const [empRes, deptRes] = await Promise.all([api.get("/employees"), api.get("/departments")]);
-    setEmployees(empRes.data.items);
-    setDepts(deptRes.data.items);
-    if (!form.departmentId && deptRes.data.items[0]?._id) {
-      setForm((p) => ({ ...p, departmentId: deptRes.data.items[0]._id }));
-    }
-  }
-
   useEffect(() => {
-    if (!isManager) return;
-    load().catch((e) => setError(normalizeError(e)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isManager]);
+    if (!isManager || depts.length === 0) return;
+    setForm((p) => (p.departmentId ? p : { ...p, departmentId: depts[0]._id }));
+  }, [isManager, depts]);
 
-  async function createEmployeeWithUser(e) {
+  const loadFailed = deptFailed || empFailed;
+  const loadError = deptErr || empErr;
+  const combinedError = loadFailed ? normalizeError(loadError) : error;
+
+  async function createEmployeeWithUserSubmit(e) {
     e.preventDefault();
-    setBusy(true);
     setError("");
     try {
       const payload = {
         ...form,
         dateOfJoining: form.dateOfJoining || null,
       };
-      const { data } = await api.post("/employees/with-user", payload);
-      setEmployees((prev) => [data.item, ...prev]);
-      setForm((p) => ({ ...p, name: "", email: "", password: "", employeeId: "", title: "", phone: "", location: "" }));
+      await createEmployeeWithUser(payload).unwrap();
+      setForm((p) => ({
+        ...p,
+        name: "",
+        email: "",
+        password: "",
+        employeeId: "",
+        title: "",
+        phone: "",
+        location: "",
+      }));
     } catch (err) {
       setError(normalizeError(err));
-    } finally {
-      setBusy(false);
     }
   }
 
   async function removeEmployee(id) {
     if (!confirm("Delete this employee profile?")) return;
     try {
-      await api.delete(`/employees/${id}`);
-      setEmployees((prev) => prev.filter((e) => e._id !== id));
+      await deleteEmployee(id).unwrap();
     } catch (err) {
       setError(normalizeError(err));
     }
@@ -84,7 +91,7 @@ export default function EmployeesPage() {
       <div className="card">
         <h2 className="title">Employees</h2>
         <p className="subtitle">Create employee profiles (this also creates their login account).</p>
-        {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
+        {combinedError && <div className="error" style={{ marginTop: 12 }}>{combinedError}</div>}
       </div>
 
       <div className="card">
@@ -92,7 +99,7 @@ export default function EmployeesPage() {
         {depts.length === 0 ? (
           <div className="error">Create a department first.</div>
         ) : (
-          <form onSubmit={createEmployeeWithUser}>
+          <form onSubmit={createEmployeeWithUserSubmit}>
             <div className="cols2">
               <div>
                 <label>Name</label>
@@ -107,7 +114,11 @@ export default function EmployeesPage() {
             <div className="cols2">
               <div>
                 <label>Temp password</label>
-                <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} />
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                />
               </div>
               <div>
                 <label>Role</label>
@@ -122,13 +133,22 @@ export default function EmployeesPage() {
             <div className="cols2">
               <div>
                 <label>Employee ID</label>
-                <input value={form.employeeId} onChange={(e) => setForm((p) => ({ ...p, employeeId: e.target.value }))} placeholder="EMP-001" />
+                <input
+                  value={form.employeeId}
+                  onChange={(e) => setForm((p) => ({ ...p, employeeId: e.target.value }))}
+                  placeholder="EMP-001"
+                />
               </div>
               <div>
                 <label>Department</label>
-                <select value={form.departmentId} onChange={(e) => setForm((p) => ({ ...p, departmentId: e.target.value }))}>
+                <select
+                  value={form.departmentId}
+                  onChange={(e) => setForm((p) => ({ ...p, departmentId: e.target.value }))}
+                >
                   {deptOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -137,11 +157,19 @@ export default function EmployeesPage() {
             <div className="cols2">
               <div>
                 <label>Title</label>
-                <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Software Engineer" />
+                <input
+                  value={form.title}
+                  onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="Software Engineer"
+                />
               </div>
               <div>
                 <label>Date of joining</label>
-                <input type="date" value={form.dateOfJoining} onChange={(e) => setForm((p) => ({ ...p, dateOfJoining: e.target.value }))} />
+                <input
+                  type="date"
+                  value={form.dateOfJoining}
+                  onChange={(e) => setForm((p) => ({ ...p, dateOfJoining: e.target.value }))}
+                />
               </div>
             </div>
 
@@ -157,7 +185,9 @@ export default function EmployeesPage() {
             </div>
 
             <div style={{ height: 12 }} />
-            <button className="primary" disabled={busy}>{busy ? "Saving..." : "Create employee"}</button>
+            <button className="primary" disabled={creating}>
+              {creating ? "Saving..." : "Create employee"}
+            </button>
           </form>
         )}
       </div>
@@ -179,16 +209,26 @@ export default function EmployeesPage() {
               <tr key={e._id}>
                 <td>
                   <b>{e.user?.name}</b>
-                  <div className="hint">{e.user?.email} · {e.employeeId}</div>
+                  <div className="hint">
+                    {e.user?.email} · {e.employeeId}
+                  </div>
                 </td>
                 <td>{e.department?.name || "—"}</td>
                 <td className="hint">{e.title || "—"}</td>
                 <td className="hint">{e.isActive ? "active" : "inactive"}</td>
-                <td><button className="danger" onClick={() => removeEmployee(e._id)}>Delete</button></td>
+                <td>
+                  <button className="danger" onClick={() => removeEmployee(e._id)}>
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
             {employees.length === 0 && (
-              <tr><td colSpan={5} className="hint">No employees yet.</td></tr>
+              <tr>
+                <td colSpan={5} className="hint">
+                  No employees yet.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -196,4 +236,3 @@ export default function EmployeesPage() {
     </div>
   );
 }
-

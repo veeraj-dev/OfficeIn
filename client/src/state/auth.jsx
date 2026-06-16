@@ -6,6 +6,8 @@ const AuthContext = createContext(null);
 function normalizeError(err) {
   const msg =
     err?.response?.data?.message ||
+    err?.data?.message ||
+    err?.error ||
     err?.message ||
     "Something went wrong";
   return String(msg);

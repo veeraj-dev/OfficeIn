@@ -1,6 +1,6 @@
 import axios from "axios";
 
-function resolveApiBaseUrl() {
+export function resolveApiBaseUrl() {
   const configured = String(import.meta.env.VITE_API_URL || "").trim();
   if (!configured) return "http://localhost:5000/api";
 

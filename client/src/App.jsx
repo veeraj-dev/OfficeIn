@@ -3,7 +3,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import OfficeLayout from "./components/OfficeLayout.jsx";
 import LandingPage from "./pages/Landing.jsx";
-import LoginPage from "./pages/Login.jsx";
 import DashboardPage from "./pages/Dashboard.jsx";
 import DepartmentsPage from "./pages/Departments.jsx";
 import EmployeesPage from "./pages/Employees.jsx";
@@ -21,7 +20,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<Navigate to="/" replace />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<OfficeLayout />}>

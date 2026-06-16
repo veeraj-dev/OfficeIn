@@ -1,0 +1,26 @@
+
+Log in page The AuthProvider flow:
+
+App opens
+  → Read localStorage
+      ↓ token found?
+      YES → validate with /api/auth/me
+              ↓ valid?   → restore session → correct dashboard
+              ↓ invalid? → clearAuth()     → /login
+      NO  → show /login
+
+User logs in
+  → POST /api/auth/login
+  → save token + user to localStorage
+  → arm Axios with Bearer token
+  → set state → redirect to dashboard
+
+User logs out
+  → wipe localStorage
+  → disarm Axios
+  → clear state → redirect to /login
+
+Storing the JWT in localStorage is convenient but has an XSS risk — 
+if any injected script runs on the page, it can read the token. 
+The more secure alternative is storing it in an httpOnly cookie, which JavaScript can't access at all. 
+Worth raising as a security improvement if this goes to production

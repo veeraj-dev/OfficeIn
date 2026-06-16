@@ -1,27 +1,11 @@
-import React, { useEffect, useState } from "react";
-import api from "../lib/api.js";
+import React, { useMemo } from "react";
 import { useAuth } from "../state/auth.jsx";
+import { useGetHealthQuery } from "../store/officeApi.js";
 
 export default function DashboardPage() {
   const { user, isManager, normalizeError } = useAuth();
-  const [health, setHealth] = useState(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const { data } = await api.get("/health");
-        if (!cancelled) setHealth(data);
-      } catch (e) {
-        if (!cancelled) setError(normalizeError(e));
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [normalizeError]);
+  const { data: health, error: healthError, isError } = useGetHealthQuery();
+  const error = useMemo(() => (isError ? normalizeError(healthError) : ""), [isError, healthError, normalizeError]);
 
   return (
     <div className="grid">

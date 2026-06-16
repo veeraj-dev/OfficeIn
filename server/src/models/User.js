@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
 
 userSchema.methods.verifyPassword = async function verifyPassword(password) {
   return bcrypt.compare(password, this.passwordHash);
-};
+}; 
 
 userSchema.statics.hashPassword = async function hashPassword(password) {
   const salt = await bcrypt.genSalt(10);
