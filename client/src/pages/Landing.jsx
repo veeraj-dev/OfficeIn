@@ -47,22 +47,40 @@ function LoginPanel({ heading, accent = "admin", onSubmit, busy, error }) {
   );
 }
 
+const MSG_EMPLOYEE_ONLY =
+  "This sign-in is for employees only. Use Administrator Access if you are an admin or manager.";
+const MSG_ADMIN_ONLY =
+  "This sign-in is for administrators and managers only. Use Employee Access if you are an employee.";
+
 export default function LandingPage() {
-  const { login, normalizeError } = useAuth();
+  const { login, logout, normalizeError } = useAuth();
   const nav = useNavigate();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState({ admin: false, employee: false });
   const [error, setError] = useState({ admin: "", employee: "" });
 
   async function doLogin(which, { email, password }) {
-    setBusy(true);
+    setBusy((b) => ({ ...b, [which]: true }));
     setError((p) => ({ ...p, [which]: "" }));
     try {
-      await login(email, password);
+      const user = await login(email, password);
+      if (which === "employee") {
+        if (user.role !== "employee") {
+          logout();
+          setError((p) => ({ ...p, employee: MSG_EMPLOYEE_ONLY }));
+          return;
+        }
+      } else if (which === "admin") {
+        if (user.role !== "admin" && user.role !== "manager") {
+          logout();
+          setError((p) => ({ ...p, admin: MSG_ADMIN_ONLY }));
+          return;
+        }
+      }
       nav("/app", { replace: true });
     } catch (e) {
       setError((p) => ({ ...p, [which]: normalizeError(e) }));
     } finally {
-      setBusy(false);
+      setBusy((b) => ({ ...b, [which]: false }));
     }
   }
 
@@ -76,14 +94,14 @@ export default function LandingPage() {
         <LoginPanel
           heading="Administrator Access"
           accent="admin"
-          busy={busy}
+          busy={busy.admin}
           error={error.admin}
           onSubmit={(payload) => doLogin("admin", payload)}
         />
         <LoginPanel
           heading="Employee Access"
           accent="employee"
-          busy={busy}
+          busy={busy.employee}
           error={error.employee}
           onSubmit={(payload) => doLogin("employee", payload)}
         />

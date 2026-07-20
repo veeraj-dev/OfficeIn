@@ -16,26 +16,8 @@ dotenv.config();
 const app = express();
 
 const allowedOrigins = new Set(
-  [
-    process.env.CLIENT_ORIGIN,
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-  ].filter(Boolean)
+  [process.env.CLIENT_ORIGIN, "http://localhost:5173", "http://localhost:5174"].filter(Boolean)
 );
-
-function isAllowedLocalOrigin(origin) {
-  try {
-    const u = new URL(origin);
-    if (!["http:", "https:"].includes(u.protocol)) return false;
-    if (u.hostname !== "localhost" && u.hostname !== "127.0.0.1") return false;
-    if (!u.port) return false;
-    const port = Number(u.port);
-    return Number.isFinite(port) && port >= 5170 && port <= 5190;
-  } catch {
-    return false;
-  }
-}
 
 app.use(
   cors({
@@ -43,7 +25,6 @@ app.use(
       // Allow server-to-server requests or non-browser tools with no Origin header.
       if (!origin) return callback(null, true);
       if (allowedOrigins.has(origin)) return callback(null, true);
-      if (isAllowedLocalOrigin(origin)) return callback(null, true);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: false,

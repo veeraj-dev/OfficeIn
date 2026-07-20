@@ -1,47 +1,40 @@
-import React, { useEffect, useMemo, useState } from "react";
-import api from "../lib/api.js";
+import React, { useMemo, useState } from "react";
 import { useAuth } from "../state/auth.jsx";
+import {
+  useCreateDepartmentMutation,
+  useDeleteDepartmentMutation,
+  useGetDepartmentsQuery,
+} from "../store/officeApi.js";
 
 export default function DepartmentsPage() {
   const { isManager, normalizeError } = useAuth();
-  const [items, setItems] = useState([]);
+  const { data: items = [], error: loadError, isError: loadFailed } = useGetDepartmentsQuery();
+  const [createDepartment, { isLoading: creating }] = useCreateDepartmentMutation();
+  const [deleteDepartment] = useDeleteDepartmentMutation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const sorted = useMemo(() => [...items].sort((a, b) => a.name.localeCompare(b.name)), [items]);
 
-  async function load() {
-    const { data } = await api.get("/departments");
-    setItems(data.items);
-  }
-  
-  useEffect(() => {
-    load().catch((e) => setError(normalizeError(e)));
-  }, [normalizeError]);
+  const combinedError = loadFailed ? normalizeError(loadError) : error;
 
   async function createDept(e) {
     e.preventDefault();
-    setBusy(true);
     setError("");
     try {
-      const { data } = await api.post("/departments", { name, description });
-      setItems((prev) => [data.item, ...prev]);
+      await createDepartment({ name, description }).unwrap();
       setName("");
       setDescription("");
     } catch (err) {
       setError(normalizeError(err));
-    } finally {
-      setBusy(false);
     }
   }
 
   async function removeDept(id) {
     if (!confirm("Delete this department?")) return;
     try {
-      await api.delete(`/departments/${id}`);
-      setItems((prev) => prev.filter((d) => d._id !== id));
+      await deleteDepartment(id).unwrap();
     } catch (err) {
       setError(normalizeError(err));
     }
@@ -57,7 +50,7 @@ export default function DepartmentsPage() {
           </div>
           <div className="spacer" />
         </div>
-        {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
+        {combinedError && <div className="error" style={{ marginTop: 12 }}>{combinedError}</div>}
       </div>
 
       {!isManager ? (
@@ -79,8 +72,8 @@ export default function DepartmentsPage() {
               </div>
             </div>
             <div style={{ height: 12 }} />
-            <button className="primary" disabled={busy}>
-              {busy ? "Saving..." : "Create"}
+            <button className="primary" disabled={creating}>
+              {creating ? "Saving..." : "Create"}
             </button>
           </form>
         </div>

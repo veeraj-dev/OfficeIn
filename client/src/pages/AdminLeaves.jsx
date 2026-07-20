@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import api from "../lib/api.js";
+import React, { useMemo, useState } from "react";
 import { useAuth } from "../state/auth.jsx";
+import { useGetAllLeavesQuery, useUpdateLeaveStatusMutation } from "../store/officeApi.js";
 
 function formatDate(d) {
   if (!d) return "—";
@@ -13,20 +13,14 @@ function formatDate(d) {
 
 export default function AdminLeavesPage() {
   const { normalizeError } = useAuth();
-  const [all, setAll] = useState([]);
+  const { data: all = [], error: loadError, isError: loadFailed } = useGetAllLeavesQuery();
+  const [updateLeaveStatus, { isLoading: reviewing }] = useUpdateLeaveStatusMutation();
   const [error, setError] = useState("");
   const [reviewNotes, setReviewNotes] = useState({});
 
   const allSorted = useMemo(() => [...all], [all]);
 
-  async function loadAll() {
-    const { data } = await api.get("/leaves");
-    setAll(data.items);
-  }
-
-  useEffect(() => {
-    loadAll().catch((e) => setError(normalizeError(e)));
-  }, [normalizeError]);
+  const combinedError = loadFailed ? normalizeError(loadError) : error;
 
   async function setStatus(id, status) {
     setError("");
@@ -36,8 +30,7 @@ export default function AdminLeavesPage() {
         setError("Comment is required to approve or deny a leave request.");
         return;
       }
-      const { data } = await api.patch(`/leaves/${id}/status`, { status, reviewNote });
-      setAll((prev) => prev.map((x) => (x._id === id ? data.item : x)));
+      await updateLeaveStatus({ id, status, reviewNote }).unwrap();
     } catch (err) {
       setError(normalizeError(err));
     }
@@ -48,7 +41,7 @@ export default function AdminLeavesPage() {
       <div className="card">
         <h2 className="title">Leave Approvals</h2>
         <p className="subtitle">Review employee leave requests. Comment is required for approve/deny.</p>
-        {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
+        {combinedError && <div className="error" style={{ marginTop: 12 }}>{combinedError}</div>}
       </div>
 
       <div className="card">
@@ -71,8 +64,12 @@ export default function AdminLeavesPage() {
                   <div className="hint">{r.employee?.user?.email || ""}</div>
                 </td>
                 <td className="hint">{r.employee?.department?.name || "—"}</td>
-                <td>{formatDate(r.from)} → {formatDate(r.to)}</td>
-                <td><b>{r.status}</b></td>
+                <td>
+                  {formatDate(r.from)} → {formatDate(r.to)}
+                </td>
+                <td>
+                  <b>{r.status}</b>
+                </td>
                 <td>
                   <textarea
                     rows={2}
@@ -84,17 +81,30 @@ export default function AdminLeavesPage() {
                 </td>
                 <td>
                   <div className="row" style={{ justifyContent: "flex-end" }}>
-                    <button onClick={() => setStatus(r._id, "approved")} className="primary">Approve</button>
-                    <button onClick={() => setStatus(r._id, "denied")} className="danger">Deny</button>
+                    <button
+                      onClick={() => setStatus(r._id, "approved")}
+                      className="primary"
+                      disabled={reviewing}
+                    >
+                      Approve
+                    </button>
+                    <button onClick={() => setStatus(r._id, "denied")} className="danger" disabled={reviewing}>
+                      Deny
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
-            {allSorted.length === 0 && <tr><td colSpan={6} className="hint">No leave requests.</td></tr>}
+            {allSorted.length === 0 && (
+              <tr>
+                <td colSpan={6} className="hint">
+                  No leave requests.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
-
