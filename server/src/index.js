@@ -50,10 +50,10 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/leaves", leaveRoutes);
 
 // 3. ADD THIS BLOCK: Route all browser page refreshes straight to React's index.html
-app.get("*", (req, res) => {
+app.get("*", (req, res, next) => { // <--- Added 'next' right here!
   // If it's looking for an API route that doesn't exist, let it skip to the error handler
   if (req.path.startsWith("/api/")) {
-    return next();
+    return next(); 
   }
   res.sendFile(path.join(__dirname, "../public", "index.html"));
 });
