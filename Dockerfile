@@ -3,11 +3,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files first to leverage Docker cache
-COPY office-management/package*.json ./
+COPY package*.json ./
 RUN npm ci
 
 # Copy the rest of the application source
-COPY office-management/ ./
+COPY . ./
 RUN npm run build
 
 # Stage 2: Production environment
