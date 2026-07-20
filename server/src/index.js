@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
-const path = require("path"); // 1. ADD THIS LINE AT THE TOP
+const path = require("path");
 
 const { connectDb } = require("./lib/db");
 const { notFoundHandler, errorHandler } = require("./middleware/errors");
@@ -37,9 +37,7 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 
-// 2. ADD THIS LINE: Tell Express to serve the static frontend files compiled by Docker
-app.use(express.static(path.join(__dirname, "../public")));
-
+// --- 1. HEALTH AND API ROUTES FIRST ---
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "office-management-api" });
 });
@@ -49,16 +47,19 @@ app.use("/api/departments", departmentRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/leaves", leaveRoutes);
 
-// 3. ADD THIS BLOCK: Route all browser page refreshes straight to React's index.html
-app.get("*", (req, res, next) => { // <--- Added 'next' right here!
-  // If it's looking for an API route that doesn't exist, let it skip to the error handler
+// --- 2. STATIC FRONTEND SERVING SECOND ---
+// This tells Express to look inside the public folder for JS/CSS files first
+app.use(express.static("/app/server/public"));
+
+// This catches any frontend URL browser refreshes and loads the dashboard
+app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api/")) {
-    return next(); 
+    return next(); // If it's a broken API route, let it drop to the 404 handler below
   }
-  res.sendFile(path.join(__dirname, "../public", "index.html"));
+  res.sendFile("/app/server/public/index.html");
 });
 
-// Leave these error handlers right at the very bottom
+// --- 3. ERROR HANDLERS AT THE VERY BOTTOM ---
 app.use(notFoundHandler);
 app.use(errorHandler);
 
