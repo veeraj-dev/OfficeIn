@@ -21,10 +21,18 @@ export const officeApi = createApi({
       transformResponse: (res) => res.items,
       providesTags: (result) =>
         result
-          ? [...result.map((d) => ({ type: "Department", id: d._id })), { type: "Department", id: "LIST" }]
+          ? [
+              ...result.map((d) => ({ type: "Department", id: d._id })),
+              { type: "Department", id: "LIST" },
+            ]
           : [{ type: "Department", id: "LIST" }],
     }),
     createDepartment: builder.mutation({
+      query: (body) => ({ url: "/departments", method: "POST", body }),
+      transformResponse: (res) => res.item,
+      invalidatesTags: [{ type: "Department", id: "LIST" }],
+    }),
+    deleteDepartment: builder.mutation({
       query: (body) => ({ url: "/departments", method: "POST", body }),
       transformResponse: (res) => res.item,
       invalidatesTags: [{ type: "Department", id: "LIST" }],
@@ -38,7 +46,10 @@ export const officeApi = createApi({
       transformResponse: (res) => res.items,
       providesTags: (result) =>
         result
-          ? [...result.map((e) => ({ type: "Employee", id: e._id })), { type: "Employee", id: "LIST" }]
+          ? [
+              ...result.map((e) => ({ type: "Employee", id: e._id })),
+              { type: "Employee", id: "LIST" },
+            ]
           : [{ type: "Employee", id: "LIST" }],
     }),
     createEmployeeWithUser: builder.mutation({
@@ -58,7 +69,10 @@ export const officeApi = createApi({
     createLeave: builder.mutation({
       query: (body) => ({ url: "/leaves", method: "POST", body }),
       transformResponse: (res) => res.item,
-      invalidatesTags: [{ type: "Leave", id: "MINE" }, { type: "Leave", id: "LIST" }],
+      invalidatesTags: [
+        { type: "Leave", id: "MINE" },
+        { type: "Leave", id: "LIST" },
+      ],
     }),
     getAllLeaves: builder.query({
       query: () => "/leaves",
